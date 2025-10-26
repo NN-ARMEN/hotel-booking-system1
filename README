@@ -1,73 +1,59 @@
+Система Бронирования Отелей
 
-# Hotel Booking System 🏨
+Полнофункциональная система управления бронированием отелей, построенная на Spring Boot и Java.
 
-A comprehensive hotel booking management system built with Spring Boot and Java.
+Функциональность
+- Полное управление отелями с операциями создания, чтения, обновления и удаления
+- Система отслеживания доступности номеров и бронирования
+- Управление гостями и история бронирований
+- Обработка платежей с процессом подтверждения
+- Проверка конфликтов дат для предотвращения двойных бронирований
 
-## Features
-- Complete hotel management with CRUD operations
-- Room availability tracking and booking system
-- Guest management and booking history
-- Payment processing with confirmation workflow
-- Date conflict validation to prevent double bookings
+Технологии
+- Java 17
+- Spring Boot 3.2.0
+- Spring Data JPA
+- H2 Database (для разработки)
+- Maven
+- REST API
 
-## Technologies
-- **Java 17**
-- **Spring Boot 3.2.0**
-- **Spring Data JPA**
-- **H2 Database** (development)
-- **Maven**
-- **REST API**
+API Эндпоинты
+- GET/POST/PUT/DELETE /api/hotels - Управление отелями
+- GET/POST/PUT/DELETE /api/rooms - Управление номерами
+- GET/POST/PUT/DELETE /api/guests - Управление гостями
+- GET/POST/PUT/DELETE /api/bookings - Управление бронированиями
+- GET/POST/PUT/DELETE /api/payments - Управление платежами
 
-## API Endpoints
-- \`GET/POST/PUT/DELETE /api/hotels\` - Hotel management
-- \`GET/POST/PUT/DELETE /api/rooms\` - Room management
-- \`GET/POST/PUT/DELETE /api/guests\` - Guest management
-- \`GET/POST/PUT/DELETE /api/bookings\` - Booking management
-- \`GET/POST/PUT/DELETE /api/payments\` - Payment management
+Начало работы
 
-## Getting Started
+1. Клонируйте репозиторий:
+   git clone https://github.com/NN-ARMEN/hotel-booking-system1.git
 
-1. **Clone the repository:**
-   \`\`\`bash
-   git clone https://github.com/NN-ARMEN/hotel-booking-system.git
-   \`\`\`
-
-2. **Run the application:**
-   \`\`\`bash
+2. Запустите приложение:
    mvn spring-boot:run
-   \`\`\`
 
-3. **Access the API:**
+3. Доступ к приложению:
    - API: http://localhost:8080
    - H2 Console: http://localhost:8080/h2-console
-     - JDBC URL: \`jdbc:h2:mem:hoteldb\`
-     - Username: \`sa\`
-     - Password: (empty)
+     - JDBC URL: jdbc:h2:mem:hoteldb
+     - Имя пользователя: sa
+     - Пароль: (пусто)
 
-## Project Structure
-\`\`\`
+Структура проекта
 src/main/java/com/hotel/
-├── controller/    # REST API controllers
-├── service/       # Business logic layer
-├── repository/    # Data access layer (Spring Data JPA)
-├── model/         # JPA entities (Hotel, Room, Guest, Booking, Payment)
-├── dto/           # Data transfer objects
-└── exception/     # Custom exception handling
-\`\`\`
+  controller/    - REST API контроллеры
+  service/       - Бизнес-логика
+  repository/    - Доступ к данным (Spring Data JPA)
+  model/         - JPA сущности (Отель, Номер, Гость, Бронирование, Платеж)
+  dto/           - Объекты передачи данных
+  exception/     - Пользовательская обработка исключений
 
-## Example Usage
+Пример использования
+1. Создайте отель
+2. Добавьте номера в отель
+3. Зарегистрируйте гостей
+4. Создайте бронирования с проверкой дат
+5. Обработайте платежи для подтверждения бронирований
 
-1. Create a hotel
-2. Add rooms to the hotel
-3. Register guests
-4. Create bookings with date validation
-5. Process payments to confirm bookings
-
-## License
+Лицензия
 MIT License
-"@ | Out-File -FilePath "README.md" -Encoding UTF8
-
-# Добавляем README
-git add README.md
-git commit -m "Add comprehensive README with setup instructions"
-git push
