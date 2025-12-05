@@ -1,5 +1,6 @@
 package com.hotel.config;
 
+import com.hotel.security.JwtAuthenticationFilter;
 import com.hotel.service.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,6 +31,11 @@ public class SecurityConfig {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -58,38 +65,13 @@ public class SecurityConfig {
                         // Публичные endpoints
                         .requestMatchers("/api/auth/**", "/error", "/h2-console/**").permitAll()
 
-                        // Guests endpoints
-                        .requestMatchers("/api/guests/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
+                        // ... остальные настройки доступа ...
 
-                        // Hotels endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
-                        .requestMatchers("/api/hotels/**").hasAnyRole("ADMIN", "MANAGER")
-
-                        // Rooms endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/rooms/**").permitAll()
-                        .requestMatchers("/api/rooms/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
-
-                        // Bookings endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/bookings/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
-                        .requestMatchers(HttpMethod.POST, "/api/bookings").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
-                        .requestMatchers(HttpMethod.PUT, "/api/bookings/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
-                        .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").hasAnyRole("ADMIN", "MANAGER")
-
-                        // Business endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/business/rooms/available").permitAll()
-                        .requestMatchers("/api/business/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
-
-                        // Payments endpoints
-                        .requestMatchers("/api/payments/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
-
-                        // H2 Console
-                        .requestMatchers("/h2-console/**").permitAll()
-
-                        // Все остальные запросы требуют аутентификации
                         .anyRequest().authenticated()
                 )
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.sameOrigin()) // Для H2 Console
+                        .frameOptions(frame -> frame.sameOrigin())
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';")
                         )

@@ -43,4 +43,53 @@ public class AuthDTO {
         public String getRole() { return role; }
         public void setRole(String role) { this.role = role; }
     }
+
+    public static class TokenRefreshRequest {
+        @NotBlank(message = "Refresh token is required")
+        private String refreshToken;
+
+        public String getRefreshToken() { return refreshToken; }
+        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+    }
+
+    public static class TokenResponse {
+        private String accessToken;
+        private String refreshToken;
+        private String tokenType;
+        private String sessionId;
+        private Long expiresIn;
+        private Object user;
+
+        // Constructors
+        public TokenResponse() {}
+
+        public TokenResponse(String accessToken, String refreshToken, String tokenType,
+                             String sessionId, Long expiresIn, Object user) {
+            this.accessToken = accessToken;
+            this.refreshToken = refreshToken;
+            this.tokenType = tokenType;
+            this.sessionId = sessionId;
+            this.expiresIn = expiresIn;
+            this.user = user;
+        }
+
+        // Getters and Setters
+        public String getAccessToken() { return accessToken; }
+        public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+
+        public String getRefreshToken() { return refreshToken; }
+        public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+
+        public String getTokenType() { return tokenType; }
+        public void setTokenType(String tokenType) { this.tokenType = tokenType; }
+
+        public String getSessionId() { return sessionId; }
+        public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+        public Long getExpiresIn() { return expiresIn; }
+        public void setExpiresIn(Long expiresIn) { this.expiresIn = expiresIn; }
+
+        public Object getUser() { return user; }
+        public void setUser(Object user) { this.user = user; }
+    }
 }

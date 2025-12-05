@@ -12,6 +12,284 @@ public class HotelBookingApplication {
 }
 
 
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\config\DataLoader.java
+package com.hotel.config;
+
+import com.hotel.model.ERole;
+import com.hotel.model.Role;
+import com.hotel.model.User;
+import com.hotel.repository.RoleRepository;
+import com.hotel.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Component
+public class DataLoader implements CommandLineRunner {
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public void run(String... args) throws Exception {
+        // РЎРѕР·РґР°РµРј СЂРѕР»Рё, РµСЃР»Рё РёС… РЅРµС‚
+        if (roleRepository.count() == 0) {
+            roleRepository.save(new Role(ERole.ROLE_GUEST));
+            roleRepository.save(new Role(ERole.ROLE_ADMIN));
+            roleRepository.save(new Role(ERole.ROLE_MANAGER));
+            roleRepository.save(new Role(ERole.ROLE_RECEPTIONIST));
+            System.out.println("вњ… Roles created successfully!");
+        }
+
+        // РЎРѕР·РґР°РµРј Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, РµСЃР»Рё РµРіРѕ РЅРµС‚
+        if (!userRepository.existsByUsername("admin")) {
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setEmail("admin@hotel.com");
+            admin.setPassword(passwordEncoder.encode("Admin@123"));
+            admin.setEnabled(true);
+
+            Set<Role> roles = new HashSet<>();
+            Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                    .orElseThrow(() -> new RuntimeException("Admin role not found"));
+            roles.add(adminRole);
+
+            admin.setRoles(roles);
+            userRepository.save(admin);
+            System.out.println("вњ… Default admin user created:");
+            System.out.println("   Username: admin");
+            System.out.println("   Password: Admin@123");
+            System.out.println("   Email: admin@hotel.com");
+        }
+
+        // РЎРѕР·РґР°РµРј С‚РµСЃС‚РѕРІРѕРіРѕ РіРѕСЃС‚СЏ, РµСЃР»Рё РµРіРѕ РЅРµС‚
+        if (!userRepository.existsByUsername("guest")) {
+            User guest = new User();
+            guest.setUsername("guest");
+            guest.setEmail("guest@hotel.com");
+            guest.setPassword(passwordEncoder.encode("Guest@123"));
+            guest.setEnabled(true);
+
+            Set<Role> roles = new HashSet<>();
+            Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
+                    .orElseThrow(() -> new RuntimeException("Guest role not found"));
+            roles.add(guestRole);
+
+            guest.setRoles(roles);
+            userRepository.save(guest);
+            System.out.println("вњ… Default guest user created:");
+            System.out.println("   Username: guest");
+            System.out.println("   Password: Guest@123");
+            System.out.println("   Email: guest@hotel.com");
+        }
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\config\SecurityConfig.java
+package com.hotel.config;
+
+import com.hotel.service.UserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+public class SecurityConfig {
+
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // РџСѓР±Р»РёС‡РЅС‹Рµ endpoints
+                        .requestMatchers("/api/auth/**", "/error", "/h2-console/**").permitAll()
+
+                        // Guests endpoints
+                        .requestMatchers("/api/guests/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
+
+                        // Hotels endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
+                        .requestMatchers("/api/hotels/**").hasAnyRole("ADMIN", "MANAGER")
+
+                        // Rooms endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/rooms/**").permitAll()
+                        .requestMatchers("/api/rooms/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
+
+                        // Bookings endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/bookings/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
+                        .requestMatchers(HttpMethod.POST, "/api/bookings").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
+                        .requestMatchers(HttpMethod.PUT, "/api/bookings/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
+                        .requestMatchers(HttpMethod.DELETE, "/api/bookings/**").hasAnyRole("ADMIN", "MANAGER")
+
+                        // Business endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/business/rooms/available").permitAll()
+                        .requestMatchers("/api/business/**").hasAnyRole("ADMIN", "MANAGER", "RECEPTIONIST")
+
+                        // Payments endpoints
+                        .requestMatchers("/api/payments/**").hasAnyRole("GUEST", "ADMIN", "MANAGER", "RECEPTIONIST")
+
+                        // H2 Console
+                        .requestMatchers("/h2-console/**").permitAll()
+
+                        // Р’СЃРµ РѕСЃС‚Р°Р»СЊРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹ С‚СЂРµР±СѓСЋС‚ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё
+                        .anyRequest().authenticated()
+                )
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin()) // Р”Р»СЏ H2 Console
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';")
+                        )
+                )
+                .httpBasic(httpBasic -> {});
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:8080",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:8080",
+                "http://[::1]:3000",
+                "http://[::1]:8080"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin",
+                "Access-Control-Request-Method",
+                "Access-Control-Request-Headers"
+        ));
+        configuration.setExposedHeaders(Arrays.asList(
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Credentials",
+                "Authorization"
+        ));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\AuthController.java
+package com.hotel.controller;
+
+import com.hotel.dto.AuthDTO;
+import com.hotel.model.User;
+import com.hotel.service.AuthService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody AuthDTO.RegisterRequest registerRequest) {
+        try {
+            User user = authService.registerUser(registerRequest);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "User registered successfully!");
+            response.put("username", user.getUsername());
+            response.put("email", user.getEmail());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (RuntimeException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    @GetMapping("/check-username/{username}")
+    public ResponseEntity<?> checkUsernameAvailability(@PathVariable String username) {
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("available", !authService.existsByUsername(username));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/check-email/{email}")
+    public ResponseEntity<?> checkEmailAvailability(@PathVariable String email) {
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("available", !authService.existsByEmail(email));
+        return ResponseEntity.ok(response);
+    }
+}
+
+
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\BookingController.java
 package com.hotel.controller;
 
@@ -22,6 +300,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -33,36 +312,42 @@ public class BookingController {
     private BookingService bookingService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<List<Booking>> getAllBookings() {
         List<Booking> bookings = bookingService.getAllBookings();
         return ResponseEntity.ok(bookings);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#id, authentication)")
     public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
         Booking booking = bookingService.getBookingById(id);
         return ResponseEntity.ok(booking);
     }
 
     @GetMapping("/guest/{guestId}")
+    @PreAuthorize("hasRole('ADMIN') or #guestId == @bookingSecurity.getCurrentGuestId()")
     public ResponseEntity<List<Booking>> getBookingsByGuestId(@PathVariable Long guestId) {
         List<Booking> bookings = bookingService.getBookingsByGuestId(guestId);
         return ResponseEntity.ok(bookings);
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('GUEST', 'ADMIN', 'MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<Booking> createBooking(@Valid @RequestBody BookingDTO bookingDTO) {
         Booking createdBooking = bookingService.createBooking(bookingDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST')")
     public ResponseEntity<Booking> updateBooking(@PathVariable Long id, @Valid @RequestBody BookingDTO bookingDTO) {
         Booking updatedBooking = bookingService.updateBooking(id, bookingDTO);
         return ResponseEntity.ok(updatedBooking);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
         bookingService.deleteBooking(id);
         return ResponseEntity.noContent().build();
@@ -343,6 +628,55 @@ public class RoomController {
 }
 
 
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\AuthDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public class AuthDTO {
+
+    public static class LoginRequest {
+        @NotBlank(message = "Username is required")
+        private String username;
+
+        @NotBlank(message = "Password is required")
+        private String password;
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+    }
+
+    public static class RegisterRequest {
+        @NotBlank(message = "Username is required")
+        @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
+        private String username;
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
+        private String email;
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 8, message = "Password must be at least 8 characters")
+        private String password;
+
+        private String role;
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+    }
+}
+
+
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\BookingDTO.java
 package com.hotel.dto;
 
@@ -565,6 +899,16 @@ public class BookingConflictException extends RuntimeException {
 }
 
 
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\exception\PasswordValidationException.java
+package com.hotel.exception;
+
+public class PasswordValidationException extends RuntimeException {
+    public PasswordValidationException(String message) {
+        super(message);
+    }
+}
+
+
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\exception\ResourceNotFoundException.java
 package com.hotel.exception;
 
@@ -582,12 +926,14 @@ public class ResourceNotFoundException extends RuntimeException {
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Booking.java
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "guest", "room", "payment"})
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -625,28 +971,43 @@ public class Booking {
         this.room = room;
     }
 
+    // Р“РµС‚С‚РµСЂС‹
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public LocalDate getCheckInDate() { return checkInDate; }
-    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
     public LocalDate getCheckOutDate() { return checkOutDate; }
-    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public Guest getGuest() { return guest; }
-    public void setGuest(Guest guest) { this.guest = guest; }
     public Room getRoom() { return room; }
-    public void setRoom(Room room) { this.room = room; }
     public Payment getPayment() { return payment; }
+
+    // РЎРµС‚С‚РµСЂС‹ (РґРѕР±Р°РІСЊС‚Рµ СЌС‚Рё РјРµС‚РѕРґС‹)
+    public void setId(Long id) { this.id = id; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
+    public void setStatus(String status) { this.status = status; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setGuest(Guest guest) { this.guest = guest; }
+    public void setRoom(Room room) { this.room = room; }
     public void setPayment(Payment payment) { this.payment = payment; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\ERole.java
+package com.hotel.model;
+
+public enum ERole {
+    ROLE_GUEST,
+    ROLE_ADMIN,
+    ROLE_MANAGER,
+    ROLE_RECEPTIONIST
 }
 
 
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Guest.java
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -656,6 +1017,7 @@ import java.util.List;
 @Table(name = "guests", uniqueConstraints = {
         @UniqueConstraint(columnNames = "email")
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings"})
 public class Guest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -683,17 +1045,20 @@ public class Guest {
         this.phone = phone;
     }
 
+    // Р“РµС‚С‚РµСЂС‹
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
     public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
     public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<Booking> getBookings() { return bookings; }
+
+    // РЎРµС‚С‚РµСЂС‹ (РґРѕР±Р°РІСЊС‚Рµ СЌС‚Рё РјРµС‚РѕРґС‹)
+    public void setId(Long id) { this.id = id; }
+    public void setEmail(String email) { this.email = email; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
 }
 
@@ -701,6 +1066,7 @@ public class Guest {
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Hotel.java
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -710,6 +1076,7 @@ import java.util.List;
 @Table(name = "hotels", uniqueConstraints = {
         @UniqueConstraint(columnNames = "name")
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "rooms"})
 public class Hotel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -737,18 +1104,20 @@ public class Hotel {
         this.stars = stars;
     }
 
-    // Р“РµС‚С‚РµСЂС‹ Рё СЃРµС‚С‚РµСЂС‹
+    // Р“РµС‚С‚РµСЂС‹
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
     public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
     public Integer getStars() { return stars; }
-    public void setStars(Integer stars) { this.stars = stars; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<Room> getRooms() { return rooms; }
+
+    // РЎРµС‚С‚РµСЂС‹ (РґРѕР±Р°РІСЊС‚Рµ СЌС‚Рё РјРµС‚РѕРґС‹)
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setLocation(String location) { this.location = location; }
+    public void setStars(Integer stars) { this.stars = stars; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setRooms(List<Room> rooms) { this.rooms = rooms; }
 }
 
@@ -756,11 +1125,13 @@ public class Hotel {
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Payment.java
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "booking"})
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -793,26 +1164,69 @@ public class Payment {
         this.booking = booking;
     }
 
+    // Р“РµС‚С‚РµСЂС‹
+    public Long getId() { return id; }
+    public Double getAmount() { return amount; }
+    public String getMethod() { return method; }
+    public String getStatus() { return status; }
+    public String getTransactionId() { return transactionId; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public Booking getBooking() { return booking; }
+
+    // РЎРµС‚С‚РµСЂС‹ (РґРѕР±Р°РІСЊС‚Рµ СЌС‚Рё РјРµС‚РѕРґС‹)
+    public void setId(Long id) { this.id = id; }
+    public void setAmount(Double amount) { this.amount = amount; }
+    public void setMethod(String method) { this.method = method; }
+    public void setStatus(String status) { this.status = status; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public void setBooking(Booking booking) { this.booking = booking; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Role.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "roles")
+public class Role {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Enumerated(EnumType.STRING)
+    @Column(unique = true, nullable = false, length = 20)
+    private ERole name;
+
+    @ManyToMany(mappedBy = "roles")
+    private Set<User> users = new HashSet<>();
+
+    public Role() {}
+
+    public Role(ERole name) {
+        this.name = name;
+    }
+
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
-    public String getMethod() { return method; }
-    public void setMethod(String method) { this.method = method; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-    public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
-    public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
-    public Booking getBooking() { return booking; }
-    public void setBooking(Booking booking) { this.booking = booking; }
+
+    public ERole getName() { return name; }
+    public void setName(ERole name) { this.name = name; }
+
+    public Set<User> getUsers() { return users; }
+    public void setUsers(Set<User> users) { this.users = users; }
 }
 
 
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Room.java
 package com.hotel.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -821,6 +1235,7 @@ import java.util.List;
 @Table(name = "rooms", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"hotel_id", "number"})
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "hotel", "bookings"})
 public class Room {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -854,21 +1269,118 @@ public class Room {
         this.hotel = hotel;
     }
 
-    // Р“РµС‚С‚РµСЂС‹ Рё СЃРµС‚С‚РµСЂС‹
+    // Р“РµС‚С‚РµСЂС‹
+    public Long getId() { return id; }
+    public String getNumber() { return number; }
+    public String getType() { return type; }
+    public Double getPricePerNight() { return pricePerNight; }
+    public Boolean getIsAvailable() { return isAvailable; }
+    public Hotel getHotel() { return hotel; }
+    public List<Booking> getBookings() { return bookings; }
+
+    // РЎРµС‚С‚РµСЂС‹ (РґРѕР±Р°РІСЊС‚Рµ СЌС‚Рё РјРµС‚РѕРґС‹)
+    public void setId(Long id) { this.id = id; }
+    public void setNumber(String number) { this.number = number; }
+    public void setType(String type) { this.type = type; }
+    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
+    public void setIsAvailable(Boolean isAvailable) { this.isAvailable = isAvailable; }
+    public void setHotel(Hotel hotel) { this.hotel = hotel; }
+    public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\User.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank(message = "Username is required")
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @NotBlank(message = "Password is required")
+    @Column(nullable = false)
+    private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "is_enabled")
+    private boolean enabled = true;
+
+    @Column(name = "is_account_non_expired")
+    private boolean accountNonExpired = true;
+
+    @Column(name = "is_account_non_locked")
+    private boolean accountNonLocked = true;
+
+    @Column(name = "is_credentials_non_expired")
+    private boolean credentialsNonExpired = true;
+
+    // Constructors
+    public User() {}
+
+    public User(String username, String email, String password) {
+        this.username = username;
+        this.email = email;
+        this.password = password;
+    }
+
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public String getNumber() { return number; }
-    public void setNumber(String number) { this.number = number; }
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-    public Double getPricePerNight() { return pricePerNight; }
-    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
-    public Boolean getIsAvailable() { return isAvailable; }
-    public void setIsAvailable(Boolean available) { isAvailable = available; }
-    public Hotel getHotel() { return hotel; }
-    public void setHotel(Hotel hotel) { this.hotel = hotel; }
-    public List<Booking> getBookings() { return bookings; }
-    public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public Set<Role> getRoles() { return roles; }
+    public void setRoles(Set<Role> roles) { this.roles = roles; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public boolean isAccountNonExpired() { return accountNonExpired; }
+    public void setAccountNonExpired(boolean accountNonExpired) { this.accountNonExpired = accountNonExpired; }
+
+    public boolean isAccountNonLocked() { return accountNonLocked; }
+    public void setAccountNonLocked(boolean accountNonLocked) { this.accountNonLocked = accountNonLocked; }
+
+    public boolean isCredentialsNonExpired() { return credentialsNonExpired; }
+    public void setCredentialsNonExpired(boolean credentialsNonExpired) { this.credentialsNonExpired = credentialsNonExpired; }
 }
 
 
@@ -975,6 +1487,21 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 }
 
 
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\RoleRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.ERole;
+import com.hotel.model.Role;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface RoleRepository extends JpaRepository<Role, Long> {
+    Optional<Role> findByName(ERole name);
+}
+
+
 // File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\RoomRepository.java
 package com.hotel.repository;
 
@@ -997,6 +1524,197 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
 
     @Query("SELECT COUNT(r) FROM Room r WHERE r.hotel.id = :hotelId AND r.isAvailable = true")
     Long countAvailableRoomsByHotelId(@Param("hotelId") Long hotelId);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\UserRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    Optional<User> findByUsername(String username);
+    Optional<User> findByEmail(String email);
+    Boolean existsByUsername(String username);
+    Boolean existsByEmail(String email);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\security\SecurityUtils.java
+package com.hotel.security;
+
+import com.hotel.model.Booking;
+import com.hotel.model.User;
+import com.hotel.repository.BookingRepository;
+import com.hotel.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+
+@Component("bookingSecurity")
+public class SecurityUtils {
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public boolean isOwner(Long bookingId, Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        return booking.getGuest().getId().equals(user.getId());
+    }
+
+    public static String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated()) {
+            return authentication.getName();
+        }
+        return null;
+    }
+
+    public static boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getAuthorities() != null) {
+            return authentication.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals(role));
+        }
+        return false;
+    }
+    public Long getCurrentGuestId() {
+        String username = getCurrentUsername();
+        if (username != null) {
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            return user.getId();
+        }
+        return null;
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\AuthService.java
+package com.hotel.service;
+
+import com.hotel.dto.AuthDTO;
+import com.hotel.exception.PasswordValidationException;
+import com.hotel.model.ERole;
+import com.hotel.model.Role;
+import com.hotel.model.User;
+import com.hotel.repository.RoleRepository;
+import com.hotel.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+@Service
+public class AuthService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private static final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$");
+
+    @Transactional
+    public User registerUser(AuthDTO.RegisterRequest registerRequest) {
+        // РџСЂРѕРІРµСЂСЏРµРј СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚СЊ username Рё email
+        if (userRepository.existsByUsername(registerRequest.getUsername())) {
+            throw new RuntimeException("Username is already taken!");
+        }
+
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
+            throw new RuntimeException("Email is already in use!");
+        }
+
+        // РџСЂРѕРІРµСЂСЏРµРј РЅР°РґРµР¶РЅРѕСЃС‚СЊ РїР°СЂРѕР»СЏ
+        validatePassword(registerRequest.getPassword());
+
+        // РЎРѕР·РґР°РµРј РЅРѕРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+        User user = new User(
+                registerRequest.getUsername(),
+                registerRequest.getEmail(),
+                passwordEncoder.encode(registerRequest.getPassword())
+        );
+
+        // РќР°Р·РЅР°С‡Р°РµРј СЂРѕР»Рё
+        Set<Role> roles = new HashSet<>();
+
+        if (registerRequest.getRole() == null) {
+            Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
+                    .orElseThrow(() -> new RuntimeException("Role not found: ROLE_GUEST"));
+            roles.add(guestRole);
+        } else {
+            switch (registerRequest.getRole().toUpperCase()) {
+                case "ADMIN":
+                    Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                            .orElseThrow(() -> new RuntimeException("Role not found: ROLE_ADMIN"));
+                    roles.add(adminRole);
+                    break;
+                case "MANAGER":
+                    Role managerRole = roleRepository.findByName(ERole.ROLE_MANAGER)
+                            .orElseThrow(() -> new RuntimeException("Role not found: ROLE_MANAGER"));
+                    roles.add(managerRole);
+                    break;
+                case "RECEPTIONIST":
+                    Role receptionistRole = roleRepository.findByName(ERole.ROLE_RECEPTIONIST)
+                            .orElseThrow(() -> new RuntimeException("Role not found: ROLE_RECEPTIONIST"));
+                    roles.add(receptionistRole);
+                    break;
+                default:
+                    Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
+                            .orElseThrow(() -> new RuntimeException("Role not found: ROLE_GUEST"));
+                    roles.add(guestRole);
+            }
+        }
+
+        user.setRoles(roles);
+
+        return userRepository.save(user);
+    }
+
+    private void validatePassword(String password) {
+        if (password.length() < 8) {
+            throw new PasswordValidationException("Password must be at least 8 characters long");
+        }
+
+        if (!PASSWORD_PATTERN.matcher(password).matches()) {
+            throw new PasswordValidationException(
+                    "Password must contain at least one digit, one lowercase letter, " +
+                            "one uppercase letter, one special character (@#$%^&+=!) and no whitespace"
+            );
+        }
+    }
+
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
 }
 
 
@@ -1390,6 +2108,109 @@ public class RoomService {
 
     public List<Room> getRoomsByHotelId(Long hotelId) {
         return roomRepository.findByHotelId(hotelId);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\UserDetailsImpl.java
+package com.hotel.service;
+
+import com.hotel.model.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class UserDetailsImpl implements UserDetails {
+    private static final long serialVersionUID = 1L;
+
+    private Long id;
+    private String username;
+    private String email;
+
+    @JsonIgnore
+    private String password;
+
+    private Collection<? extends GrantedAuthority> authorities;
+
+    public UserDetailsImpl(Long id, String username, String email, String password,
+                           Collection<? extends GrantedAuthority> authorities) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.password = password;
+        this.authorities = authorities;
+    }
+
+    public static UserDetailsImpl build(User user) {
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
+
+        return new UserDetailsImpl(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getPassword(),
+                authorities);
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return authorities;
+    }
+
+    public Long getId() { return id; }
+    public String getEmail() { return email; }
+
+    @Override
+    public String getPassword() { return password; }
+
+    @Override
+    public String getUsername() { return username; }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override
+    public boolean isEnabled() { return true; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\UserDetailsServiceImpl.java
+package com.hotel.service;
+
+import com.hotel.model.User;
+import com.hotel.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UserDetailsServiceImpl implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+
+        return UserDetailsImpl.build(user);
     }
 }
 
