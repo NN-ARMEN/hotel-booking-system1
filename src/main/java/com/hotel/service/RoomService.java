@@ -29,25 +29,15 @@ public class RoomService {
     }
 
     public Room createRoom(RoomDTO roomDTO) {
-        System.out.println("=== Creating room for hotel ID: " + roomDTO.getHotelId());
-
-        // НАЙТИ ОТЕЛЬ!
         Hotel hotel = hotelRepository.findById(roomDTO.getHotelId())
                 .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with id: " + roomDTO.getHotelId()));
-
-        System.out.println("Hotel found: " + hotel.getName());
 
         Room room = new Room();
         room.setNumber(roomDTO.getNumber());
         room.setType(roomDTO.getType());
         room.setPricePerNight(roomDTO.getPricePerNight());
-        room.setHotel(hotel);  // ← ВАЖНО: установить отель!
-        room.setIsAvailable(true);
-
-        System.out.println("Saving room...");
-        Room savedRoom = roomRepository.save(room);
-        System.out.println("=== Room created successfully ===");
-        return savedRoom;
+        room.setHotel(hotel);
+        return roomRepository.save(room);
     }
 
     public Room updateRoom(Long id, RoomDTO roomDTO) {

@@ -50,7 +50,6 @@ public class PaymentService {
         payment.setTransactionId(transactionId);
         payment.setPaidAt(LocalDateTime.now());
 
-        // Активируем связанную бронь
         Booking booking = payment.getBooking();
         booking.setStatus("CONFIRMED");
 

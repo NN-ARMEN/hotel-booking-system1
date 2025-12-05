@@ -1,11 +1,12 @@
 package com.hotel.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "booking"})
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,7 +29,6 @@ public class Payment {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false, unique = true)
-    @JsonIgnore
     private Booking booking;
 
     public Payment() {}
@@ -39,18 +39,21 @@ public class Payment {
         this.booking = booking;
     }
 
+    // Геттеры
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
     public String getMethod() { return method; }
-    public void setMethod(String method) { this.method = method; }
     public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
     public String getTransactionId() { return transactionId; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
     public LocalDateTime getPaidAt() { return paidAt; }
-    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
     public Booking getBooking() { return booking; }
+
+    // Сеттеры (добавьте эти методы)
+    public void setId(Long id) { this.id = id; }
+    public void setAmount(Double amount) { this.amount = amount; }
+    public void setMethod(String method) { this.method = method; }
+    public void setStatus(String status) { this.status = status; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
     public void setBooking(Booking booking) { this.booking = booking; }
 }

@@ -1,13 +1,16 @@
 package com.hotel.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "hotels")
+@Table(name = "hotels", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "name")
+})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "rooms"})
 public class Hotel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +28,6 @@ public class Hotel {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<Room> rooms = new ArrayList<>();
 
     public Hotel() {}
@@ -36,17 +38,19 @@ public class Hotel {
         this.stars = stars;
     }
 
-    // Геттеры и сеттеры
+    // Геттеры
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
     public String getLocation() { return location; }
-    public void setLocation(String location) { this.location = location; }
     public Integer getStars() { return stars; }
-    public void setStars(Integer stars) { this.stars = stars; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<Room> getRooms() { return rooms; }
+
+    // Сеттеры (добавьте эти методы)
+    public void setId(Long id) { this.id = id; }
+    public void setName(String name) { this.name = name; }
+    public void setLocation(String location) { this.location = location; }
+    public void setStars(Integer stars) { this.stars = stars; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setRooms(List<Room> rooms) { this.rooms = rooms; }
 }

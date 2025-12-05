@@ -1,12 +1,15 @@
 package com.hotel.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "rooms")
+@Table(name = "rooms", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"hotel_id", "number"})
+})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "hotel", "bookings"})
 public class Room {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,11 +29,9 @@ public class Room {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hotel_id", nullable = false)
-    @JsonIgnore
     private Hotel hotel;
 
     @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<Booking> bookings = new ArrayList<>();
 
     public Room() {}
@@ -42,19 +43,21 @@ public class Room {
         this.hotel = hotel;
     }
 
-    // Геттеры и сеттеры
+    // Геттеры
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getNumber() { return number; }
-    public void setNumber(String number) { this.number = number; }
     public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
     public Double getPricePerNight() { return pricePerNight; }
-    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
     public Boolean getIsAvailable() { return isAvailable; }
-    public void setIsAvailable(Boolean available) { isAvailable = available; }
     public Hotel getHotel() { return hotel; }
-    public void setHotel(Hotel hotel) { this.hotel = hotel; }
     public List<Booking> getBookings() { return bookings; }
+
+    // Сеттеры (добавьте эти методы)
+    public void setId(Long id) { this.id = id; }
+    public void setNumber(String number) { this.number = number; }
+    public void setType(String type) { this.type = type; }
+    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
+    public void setIsAvailable(Boolean isAvailable) { this.isAvailable = isAvailable; }
+    public void setHotel(Hotel hotel) { this.hotel = hotel; }
     public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
 }

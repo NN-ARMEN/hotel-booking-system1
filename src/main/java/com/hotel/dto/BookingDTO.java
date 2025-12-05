@@ -32,7 +32,6 @@ public class BookingDTO {
         this.roomId = roomId;
     }
 
-    // Геттеры и сеттеры
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public LocalDate getCheckInDate() { return checkInDate; }

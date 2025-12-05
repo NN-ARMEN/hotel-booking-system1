@@ -1,0 +1,1396 @@
+﻿// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\HotelBookingApplication.java
+package com.hotel;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class HotelBookingApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HotelBookingApplication.class, args);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\BookingController.java
+package com.hotel.controller;
+
+import com.hotel.dto.BookingDTO;
+import com.hotel.model.Booking;
+import com.hotel.service.BookingService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+
+    @Autowired
+    private BookingService bookingService;
+
+    @GetMapping
+    public ResponseEntity<List<Booking>> getAllBookings() {
+        List<Booking> bookings = bookingService.getAllBookings();
+        return ResponseEntity.ok(bookings);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Booking> getBookingById(@PathVariable Long id) {
+        Booking booking = bookingService.getBookingById(id);
+        return ResponseEntity.ok(booking);
+    }
+
+    @GetMapping("/guest/{guestId}")
+    public ResponseEntity<List<Booking>> getBookingsByGuestId(@PathVariable Long guestId) {
+        List<Booking> bookings = bookingService.getBookingsByGuestId(guestId);
+        return ResponseEntity.ok(bookings);
+    }
+
+    @PostMapping
+    public ResponseEntity<Booking> createBooking(@Valid @RequestBody BookingDTO bookingDTO) {
+        Booking createdBooking = bookingService.createBooking(bookingDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdBooking);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Booking> updateBooking(@PathVariable Long id, @Valid @RequestBody BookingDTO bookingDTO) {
+        Booking updatedBooking = bookingService.updateBooking(id, bookingDTO);
+        return ResponseEntity.ok(updatedBooking);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
+        bookingService.deleteBooking(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\BusinessController.java
+package com.hotel.controller;
+
+import com.hotel.model.Booking;
+import com.hotel.model.Room;
+import com.hotel.service.BookingService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/business")
+public class BusinessController {
+
+    @Autowired
+    private BookingService bookingService;
+
+    // 1. РџРѕРёСЃРє РґРѕСЃС‚СѓРїРЅС‹С… РЅРѕРјРµСЂРѕРІ
+    @GetMapping("/rooms/available")
+    public List<Room> findAvailableRooms(
+            @RequestParam LocalDate checkIn,
+            @RequestParam LocalDate checkOut,
+            @RequestParam(required = false) String roomType,
+            @RequestParam(required = false) Long hotelId) {
+        return bookingService.findAvailableRooms(checkIn, checkOut, roomType, hotelId);
+    }
+
+    // 2. РћС‚РјРµРЅР° Р±СЂРѕРЅРёСЂРѕРІР°РЅРёСЏ СЃ РІРѕР·РІСЂР°С‚РѕРј
+    @PostMapping("/bookings/{id}/cancel")
+    public ResponseEntity<Void> cancelBookingWithRefund(@PathVariable Long id) {
+        bookingService.cancelBookingWithRefund(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // 3. РЎС‚Р°С‚РёСЃС‚РёРєР° РѕС‚РµР»СЏ
+    @GetMapping("/hotels/{id}/statistics")
+    public Map<String, Object> getHotelStatistics(@PathVariable Long id) {
+        return bookingService.getHotelStatistics(id);
+    }
+
+    // 4. РЎРјРµРЅР° РЅРѕРјРµСЂР°
+    @PutMapping("/bookings/{id}/change-room")
+    public Booking changeRoom(@PathVariable Long id, @RequestParam Long newRoomId) {
+        return bookingService.changeRoom(id, newRoomId);
+    }
+
+    // 5. РСЃС‚РѕСЂРёСЏ Р±СЂРѕРЅРёСЂРѕРІР°РЅРёР№ РіРѕСЃС‚СЏ
+    @GetMapping("/guests/{id}/booking-history")
+    public List<Booking> getGuestBookingHistory(@PathVariable Long id) {
+        return bookingService.getGuestBookingHistory(id);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\GuestController.java
+package com.hotel.controller;
+
+import com.hotel.dto.GuestDTO;
+import com.hotel.model.Guest;
+import com.hotel.service.GuestService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/guests")
+public class GuestController {
+
+    @Autowired
+    private GuestService guestService;
+
+    @GetMapping
+    public ResponseEntity<List<Guest>> getAllGuests() {
+        List<Guest> guests = guestService.getAllGuests();
+        return ResponseEntity.ok(guests);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Guest> getGuestById(@PathVariable Long id) {
+        Guest guest = guestService.getGuestById(id);
+        return ResponseEntity.ok(guest);
+    }
+
+    @PostMapping
+    public ResponseEntity<Guest> createGuest(@Valid @RequestBody GuestDTO guestDTO) {
+        Guest createdGuest = guestService.createGuest(guestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdGuest);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Guest> updateGuest(@PathVariable Long id, @Valid @RequestBody GuestDTO guestDTO) {
+        Guest updatedGuest = guestService.updateGuest(id, guestDTO);
+        return ResponseEntity.ok(updatedGuest);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteGuest(@PathVariable Long id) {
+        guestService.deleteGuest(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\HotelController.java
+package com.hotel.controller;
+
+import com.hotel.dto.HotelDTO;
+import com.hotel.model.Hotel;
+import com.hotel.service.HotelService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/hotels")
+public class HotelController {
+
+    @Autowired
+    private HotelService hotelService;
+
+    @GetMapping
+    public ResponseEntity<List<Hotel>> getAllHotels() {
+        List<Hotel> hotels = hotelService.getAllHotels();
+        return ResponseEntity.ok(hotels);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Hotel> getHotelById(@PathVariable Long id) {
+        Hotel hotel = hotelService.getHotelById(id);
+        return ResponseEntity.ok(hotel);
+    }
+
+    @PostMapping
+    public ResponseEntity<Hotel> createHotel(@Valid @RequestBody HotelDTO hotelDTO) {
+        Hotel createdHotel = hotelService.createHotel(hotelDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdHotel);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Hotel> updateHotel(@PathVariable Long id, @Valid @RequestBody HotelDTO hotelDTO) {
+        Hotel updatedHotel = hotelService.updateHotel(id, hotelDTO);
+        return ResponseEntity.ok(updatedHotel);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteHotel(@PathVariable Long id) {
+        hotelService.deleteHotel(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\PaymentController.java
+package com.hotel.controller;
+
+import com.hotel.dto.PaymentDTO;
+import com.hotel.model.Payment;
+import com.hotel.service.PaymentService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/payments")
+public class PaymentController {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @GetMapping
+    public ResponseEntity<List<Payment>> getAllPayments() {
+        List<Payment> payments = paymentService.getAllPayments();
+        return ResponseEntity.ok(payments);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Payment> getPaymentById(@PathVariable Long id) {
+        Payment payment = paymentService.getPaymentById(id);
+        return ResponseEntity.ok(payment);
+    }
+
+    @PostMapping
+    public ResponseEntity<Payment> createPayment(@Valid @RequestBody PaymentDTO paymentDTO) {
+        Payment createdPayment = paymentService.createPayment(paymentDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdPayment);
+    }
+
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Payment> confirmPayment(@PathVariable Long id, @RequestBody Map<String, String> request) {
+        String transactionId = request.get("transactionId");
+        Payment confirmedPayment = paymentService.confirmPayment(id, transactionId);
+        return ResponseEntity.ok(confirmedPayment);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        paymentService.deletePayment(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\controller\RoomController.java
+package com.hotel.controller;
+
+import com.hotel.dto.RoomDTO;
+import com.hotel.model.Room;
+import com.hotel.service.RoomService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/rooms")
+public class RoomController {
+
+    @Autowired
+    private RoomService roomService;
+
+    @GetMapping
+    public ResponseEntity<List<Room>> getAllRooms() {
+        List<Room> rooms = roomService.getAllRooms();
+        return ResponseEntity.ok(rooms);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Room> getRoomById(@PathVariable Long id) {
+        Room room = roomService.getRoomById(id);
+        return ResponseEntity.ok(room);
+    }
+
+    @GetMapping("/hotel/{hotelId}")
+    public ResponseEntity<List<Room>> getRoomsByHotelId(@PathVariable Long hotelId) {
+        List<Room> rooms = roomService.getRoomsByHotelId(hotelId);
+        return ResponseEntity.ok(rooms);
+    }
+
+    @PostMapping
+    public ResponseEntity<Room> createRoom(@Valid @RequestBody RoomDTO roomDTO) {
+        Room createdRoom = roomService.createRoom(roomDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdRoom);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Room> updateRoom(@PathVariable Long id, @Valid @RequestBody RoomDTO roomDTO) {
+        Room updatedRoom = roomService.updateRoom(id, roomDTO);
+        return ResponseEntity.ok(updatedRoom);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable Long id) {
+        roomService.deleteRoom(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\BookingDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+
+public class BookingDTO {
+    private Long id;
+
+    @NotNull(message = "Check-in date is required")
+    @Future(message = "Check-in date must be in the future")
+    private LocalDate checkInDate;
+
+    @NotNull(message = "Check-out date is required")
+    @Future(message = "Check-out date must be in the future")
+    private LocalDate checkOutDate;
+
+    @NotNull(message = "Guest ID is required")
+    private Long guestId;
+
+    @NotNull(message = "Room ID is required")
+    private Long roomId;
+
+    private String status;
+
+    public BookingDTO() {}
+
+    public BookingDTO(LocalDate checkInDate, LocalDate checkOutDate, Long guestId, Long roomId) {
+        this.checkInDate = checkInDate;
+        this.checkOutDate = checkOutDate;
+        this.guestId = guestId;
+        this.roomId = roomId;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public LocalDate getCheckInDate() { return checkInDate; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    public LocalDate getCheckOutDate() { return checkOutDate; }
+    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
+    public Long getGuestId() { return guestId; }
+    public void setGuestId(Long guestId) { this.guestId = guestId; }
+    public Long getRoomId() { return roomId; }
+    public void setRoomId(Long roomId) { this.roomId = roomId; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\GuestDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
+public class GuestDTO {
+    private Long id;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email format")
+    private String email;
+
+    @NotBlank(message = "Full name is required")
+    private String fullName;
+
+    private String phone;
+
+    public GuestDTO() {}
+
+    public GuestDTO(String email, String fullName, String phone) {
+        this.email = email;
+        this.fullName = fullName;
+        this.phone = phone;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\HotelDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public class HotelDTO {
+    private Long id;
+
+    @NotBlank(message = "Hotel name is required")
+    private String name;
+
+    @NotBlank(message = "Location is required")
+    private String location;
+
+    @NotNull(message = "Stars rating is required")
+    private Integer stars;
+
+    public HotelDTO() {}
+
+    public HotelDTO(String name, String location, Integer stars) {
+        this.name = name;
+        this.location = location;
+        this.stars = stars;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public Integer getStars() { return stars; }
+    public void setStars(Integer stars) { this.stars = stars; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\PaymentDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
+public class PaymentDTO {
+    private Long id;
+
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be positive")
+    private Double amount;
+
+    @NotBlank(message = "Payment method is required")
+    private String method;
+
+    @NotNull(message = "Booking ID is required")
+    private Long bookingId;
+
+    public PaymentDTO() {}
+
+    public PaymentDTO(Double amount, String method, Long bookingId) {
+        this.amount = amount;
+        this.method = method;
+        this.bookingId = bookingId;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Double getAmount() { return amount; }
+    public void setAmount(Double amount) { this.amount = amount; }
+    public String getMethod() { return method; }
+    public void setMethod(String method) { this.method = method; }
+    public Long getBookingId() { return bookingId; }
+    public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\dto\RoomDTO.java
+package com.hotel.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
+public class RoomDTO {
+    private Long id;
+
+    @NotBlank(message = "Room number is required")
+    private String number;
+
+    @NotBlank(message = "Room type is required")
+    private String type;
+
+    @NotNull(message = "Price per night is required")
+    @Positive(message = "Price must be positive")
+    private Double pricePerNight;
+
+    @NotNull(message = "Hotel ID is required")
+    private Long hotelId;
+
+    public RoomDTO() {}
+
+    public RoomDTO(String number, String type, Double pricePerNight, Long hotelId) {
+        this.number = number;
+        this.type = type;
+        this.pricePerNight = pricePerNight;
+        this.hotelId = hotelId;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getNumber() { return number; }
+    public void setNumber(String number) { this.number = number; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public Double getPricePerNight() { return pricePerNight; }
+    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
+    public Long getHotelId() { return hotelId; }
+    public void setHotelId(Long hotelId) { this.hotelId = hotelId; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\exception\BookingConflictException.java
+package com.hotel.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.CONFLICT)
+public class BookingConflictException extends RuntimeException {
+    public BookingConflictException(String message) {
+        super(message);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\exception\ResourceNotFoundException.java
+package com.hotel.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Booking.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "bookings")
+public class Booking {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "check_in_date", nullable = false)
+    private LocalDate checkInDate;
+
+    @Column(name = "check_out_date", nullable = false)
+    private LocalDate checkOutDate;
+
+    @Column(nullable = false)
+    private String status = "PENDING";
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guest_id", nullable = false)
+    private Guest guest;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", nullable = false)
+    private Room room;
+
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Payment payment;
+
+    public Booking() {}
+
+    public Booking(LocalDate checkInDate, LocalDate checkOutDate, Guest guest, Room room) {
+        this.checkInDate = checkInDate;
+        this.checkOutDate = checkOutDate;
+        this.guest = guest;
+        this.room = room;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public LocalDate getCheckInDate() { return checkInDate; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    public LocalDate getCheckOutDate() { return checkOutDate; }
+    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Guest getGuest() { return guest; }
+    public void setGuest(Guest guest) { this.guest = guest; }
+    public Room getRoom() { return room; }
+    public void setRoom(Room room) { this.room = room; }
+    public Payment getPayment() { return payment; }
+    public void setPayment(Payment payment) { this.payment = payment; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Guest.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "guests", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email")
+})
+public class Guest {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(name = "full_name", nullable = false)
+    private String fullName;
+
+    private String phone;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "guest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Booking> bookings = new ArrayList<>();
+
+    public Guest() {}
+
+    public Guest(String email, String fullName, String phone) {
+        this.email = email;
+        this.fullName = fullName;
+        this.phone = phone;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<Booking> getBookings() { return bookings; }
+    public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Hotel.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "hotels", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "name")
+})
+public class Hotel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String location;
+
+    private Integer stars;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "hotel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Room> rooms = new ArrayList<>();
+
+    public Hotel() {}
+
+    public Hotel(String name, String location, Integer stars) {
+        this.name = name;
+        this.location = location;
+        this.stars = stars;
+    }
+
+    // Р“РµС‚С‚РµСЂС‹ Рё СЃРµС‚С‚РµСЂС‹
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public Integer getStars() { return stars; }
+    public void setStars(Integer stars) { this.stars = stars; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<Room> getRooms() { return rooms; }
+    public void setRooms(List<Room> rooms) { this.rooms = rooms; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Payment.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "payments")
+public class Payment {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private Double amount;
+
+    @Column(nullable = false)
+    private String method;
+
+    @Column(nullable = false)
+    private String status = "PENDING";
+
+    @Column(name = "transaction_id", unique = true)
+    private String transactionId;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", nullable = false, unique = true)
+    private Booking booking;
+
+    public Payment() {}
+
+    public Payment(Double amount, String method, Booking booking) {
+        this.amount = amount;
+        this.method = method;
+        this.booking = booking;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Double getAmount() { return amount; }
+    public void setAmount(Double amount) { this.amount = amount; }
+    public String getMethod() { return method; }
+    public void setMethod(String method) { this.method = method; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getTransactionId() { return transactionId; }
+    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public Booking getBooking() { return booking; }
+    public void setBooking(Booking booking) { this.booking = booking; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\model\Room.java
+package com.hotel.model;
+
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "rooms", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"hotel_id", "number"})
+})
+public class Room {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String number;
+
+    @Column(nullable = false)
+    private String type;
+
+    @Column(name = "price_per_night", nullable = false)
+    private Double pricePerNight;
+
+    @Column(name = "is_available")
+    private Boolean isAvailable = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hotel_id", nullable = false)
+    private Hotel hotel;
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Booking> bookings = new ArrayList<>();
+
+    public Room() {}
+
+    public Room(String number, String type, Double pricePerNight, Hotel hotel) {
+        this.number = number;
+        this.type = type;
+        this.pricePerNight = pricePerNight;
+        this.hotel = hotel;
+    }
+
+    // Р“РµС‚С‚РµСЂС‹ Рё СЃРµС‚С‚РµСЂС‹
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getNumber() { return number; }
+    public void setNumber(String number) { this.number = number; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public Double getPricePerNight() { return pricePerNight; }
+    public void setPricePerNight(Double pricePerNight) { this.pricePerNight = pricePerNight; }
+    public Boolean getIsAvailable() { return isAvailable; }
+    public void setIsAvailable(Boolean available) { isAvailable = available; }
+    public Hotel getHotel() { return hotel; }
+    public void setHotel(Hotel hotel) { this.hotel = hotel; }
+    public List<Booking> getBookings() { return bookings; }
+    public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\BookingRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.Booking;
+import com.hotel.model.Room;  // Р”РѕР±Р°РІРёС‚СЊ СЌС‚РѕС‚ РёРјРїРѕСЂС‚
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, Long> {
+    List<Booking> findByGuestId(Long guestId);
+    List<Booking> findByRoomId(Long roomId);
+
+    @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId " +
+            "AND b.status IN ('PENDING', 'CONFIRMED') " +
+            "AND ((b.checkInDate <= :checkInDate AND b.checkOutDate > :checkInDate) " +
+            "OR (b.checkInDate < :checkOutDate AND b.checkOutDate >= :checkOutDate) " +
+            "OR (b.checkInDate >= :checkInDate AND b.checkOutDate <= :checkOutDate))")
+    List<Booking> findOverlappingBookings(@Param("roomId") Long roomId,
+                                          @Param("checkInDate") LocalDate checkInDate,
+                                          @Param("checkOutDate") LocalDate checkOutDate);
+
+    // РњРµС‚РѕРґ РґР»СЏ РїРѕРёСЃРєР° РґРѕСЃС‚СѓРїРЅС‹С… РЅРѕРјРµСЂРѕРІ
+    @Query("SELECT r FROM Room r WHERE r.isAvailable = true " +
+            "AND (:roomType IS NULL OR r.type = :roomType) " +
+            "AND (:hotelId IS NULL OR r.hotel.id = :hotelId) " +
+            "AND r.id NOT IN (SELECT b.room.id FROM Booking b WHERE " +
+            "b.status IN ('PENDING', 'CONFIRMED') AND " +
+            "((b.checkInDate <= :checkIn AND b.checkOutDate > :checkIn) OR " +
+            "(b.checkInDate < :checkOut AND b.checkOutDate >= :checkOut) OR " +
+            "(b.checkInDate >= :checkIn AND b.checkOutDate <= :checkOut)))")
+    List<Room> findAvailableRooms(@Param("checkIn") LocalDate checkIn,
+                                  @Param("checkOut") LocalDate checkOut,
+                                  @Param("roomType") String roomType,
+                                  @Param("hotelId") Long hotelId);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.room.hotel.id = :hotelId")
+    Long countByHotelId(@Param("hotelId") Long hotelId);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.room.hotel.id = :hotelId AND b.status IN ('PENDING', 'CONFIRMED')")
+    Long countActiveBookingsByHotelId(@Param("hotelId") Long hotelId);
+
+    List<Booking> findByGuestIdOrderByCreatedAtDesc(Long guestId);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\GuestRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.Guest;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface GuestRepository extends JpaRepository<Guest, Long> {
+    Optional<Guest> findByEmail(String email);
+    boolean existsByEmail(String email);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\HotelRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.Hotel;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface HotelRepository extends JpaRepository<Hotel, Long> {
+    List<Hotel> findByLocation(String location);
+    List<Hotel> findByStars(Integer stars);
+    boolean existsByName(String name);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\PaymentRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+    Optional<Payment> findByBookingId(Long bookingId);
+    Optional<Payment> findByTransactionId(String transactionId);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE " +
+            "p.booking.room.hotel.id = :hotelId AND p.status = 'COMPLETED'")
+    Double getTotalRevenueByHotelId(@Param("hotelId") Long hotelId);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\repository\RoomRepository.java
+package com.hotel.repository;
+
+import com.hotel.model.Room;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+@Repository
+public interface RoomRepository extends JpaRepository<Room, Long> {
+    List<Room> findByHotelId(Long hotelId);
+    List<Room> findByTypeAndIsAvailableTrue(String type);
+
+    @Query("SELECT r FROM Room r WHERE r.hotel.id = :hotelId AND r.isAvailable = true")
+    List<Room> findAvailableRoomsByHotelId(@Param("hotelId") Long hotelId);
+
+    Long countByHotelId(Long hotelId);
+
+    @Query("SELECT COUNT(r) FROM Room r WHERE r.hotel.id = :hotelId AND r.isAvailable = true")
+    Long countAvailableRoomsByHotelId(@Param("hotelId") Long hotelId);
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\BookingService.java
+package com.hotel.service;
+
+import com.hotel.dto.BookingDTO;
+import com.hotel.exception.BookingConflictException;
+import com.hotel.exception.ResourceNotFoundException;
+import com.hotel.model.Booking;
+import com.hotel.model.Guest;
+import com.hotel.model.Room;
+import com.hotel.repository.BookingRepository;
+import com.hotel.repository.GuestRepository;
+import com.hotel.repository.PaymentRepository;
+import com.hotel.repository.RoomRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+public class BookingService {
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private GuestRepository guestRepository;
+
+    @Autowired
+    private RoomRepository roomRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    public List<Booking> getAllBookings() {
+        return bookingRepository.findAll();
+    }
+
+    public Booking getBookingById(Long id) {
+        return bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
+    }
+
+    @Transactional
+    public Booking createBooking(BookingDTO bookingDTO) {
+        Guest guest = guestRepository.findById(bookingDTO.getGuestId())
+                .orElseThrow(() -> new ResourceNotFoundException("Guest not found with id: " + bookingDTO.getGuestId()));
+
+        Room room = roomRepository.findById(bookingDTO.getRoomId())
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + bookingDTO.getRoomId()));
+
+        List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
+                bookingDTO.getRoomId(), bookingDTO.getCheckInDate(), bookingDTO.getCheckOutDate());
+
+        if (!overlappingBookings.isEmpty()) {
+            throw new BookingConflictException("Room is already booked for the selected dates");
+        }
+
+        if (bookingDTO.getCheckOutDate().isBefore(bookingDTO.getCheckInDate()) ||
+                bookingDTO.getCheckOutDate().isEqual(bookingDTO.getCheckInDate())) {
+            throw new BookingConflictException("Check-out date must be after check-in date");
+        }
+
+        Booking booking = new Booking();
+        booking.setCheckInDate(bookingDTO.getCheckInDate());
+        booking.setCheckOutDate(bookingDTO.getCheckOutDate());
+        booking.setGuest(guest);
+        booking.setRoom(room);
+        booking.setStatus("PENDING");
+
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking updateBooking(Long id, BookingDTO bookingDTO) {
+        Booking existingBooking = getBookingById(id);
+
+        if (bookingDTO.getCheckInDate() != null) {
+            existingBooking.setCheckInDate(bookingDTO.getCheckInDate());
+        }
+        if (bookingDTO.getCheckOutDate() != null) {
+            existingBooking.setCheckOutDate(bookingDTO.getCheckOutDate());
+        }
+        if (bookingDTO.getStatus() != null) {
+            existingBooking.setStatus(bookingDTO.getStatus());
+        }
+
+        return bookingRepository.save(existingBooking);
+    }
+
+    @Transactional
+    public void deleteBooking(Long id) {
+        Booking booking = getBookingById(id);
+        bookingRepository.delete(booking);
+    }
+
+    public List<Booking> getBookingsByGuestId(Long guestId) {
+        return bookingRepository.findByGuestId(guestId);
+    }
+
+    // Р‘РР—РќР•РЎ-РћРџР•Р РђР¦РР
+
+    // 1. РџРѕРёСЃРє РґРѕСЃС‚СѓРїРЅС‹С… РЅРѕРјРµСЂРѕРІ РїРѕ РґР°С‚Р°Рј Рё С‚РёРїСѓ
+    public List<Room> findAvailableRooms(LocalDate checkIn, LocalDate checkOut, String roomType, Long hotelId) {
+        return bookingRepository.findAvailableRooms(checkIn, checkOut, roomType, hotelId);
+    }
+
+    // 2. РћС‚РјРµРЅР° Р±СЂРѕРЅРёСЂРѕРІР°РЅРёСЏ СЃ РІРѕР·РІСЂР°С‚РѕРј РїР»Р°С‚РµР¶Р°
+    @Transactional
+    public void cancelBookingWithRefund(Long bookingId) {
+        Booking booking = getBookingById(bookingId);
+
+        if (!"CANCELLED".equals(booking.getStatus())) {
+            booking.setStatus("CANCELLED");
+
+            if (booking.getPayment() != null && "COMPLETED".equals(booking.getPayment().getStatus())) {
+                var payment = booking.getPayment();
+                payment.setStatus("REFUNDED");
+                paymentRepository.save(payment);
+            }
+
+            bookingRepository.save(booking);
+        }
+    }
+
+    // 3. РџРѕР»СѓС‡РµРЅРёРµ СЃС‚Р°С‚РёСЃС‚РёРєРё РїРѕ РѕС‚РµР»СЋ
+    public Map<String, Object> getHotelStatistics(Long hotelId) {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalRooms", roomRepository.countByHotelId(hotelId));
+        stats.put("availableRooms", roomRepository.countAvailableRoomsByHotelId(hotelId));
+        stats.put("totalBookings", bookingRepository.countByHotelId(hotelId));
+        stats.put("activeBookings", bookingRepository.countActiveBookingsByHotelId(hotelId));
+        stats.put("revenue", paymentRepository.getTotalRevenueByHotelId(hotelId));
+        return stats;
+    }
+
+    // 4. РЎРјРµРЅР° РЅРѕРјРµСЂР° РґР»СЏ Р±СЂРѕРЅРёСЂРѕРІР°РЅРёСЏ
+    @Transactional
+    public Booking changeRoom(Long bookingId, Long newRoomId) {
+        Booking booking = getBookingById(bookingId);
+        Room newRoom = roomRepository.findById(newRoomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + newRoomId));
+
+        List<Booking> conflicts = bookingRepository.findOverlappingBookings(
+                newRoomId, booking.getCheckInDate(), booking.getCheckOutDate());
+
+        conflicts = conflicts.stream()
+                .filter(b -> !b.getId().equals(bookingId))
+                .collect(Collectors.toList());
+
+        if (!conflicts.isEmpty()) {
+            throw new BookingConflictException("New room is not available for the selected dates");
+        }
+
+        booking.setRoom(newRoom);
+        return bookingRepository.save(booking);
+    }
+
+    // 5. РџРѕР»СѓС‡РµРЅРёРµ РёСЃС‚РѕСЂРёРё Р±СЂРѕРЅРёСЂРѕРІР°РЅРёР№ РіРѕСЃС‚СЏ
+    public List<Booking> getGuestBookingHistory(Long guestId) {
+        return bookingRepository.findByGuestIdOrderByCreatedAtDesc(guestId);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\GuestService.java
+package com.hotel.service;
+
+import com.hotel.dto.GuestDTO;
+import com.hotel.exception.ResourceNotFoundException;
+import com.hotel.model.Guest;
+import com.hotel.repository.GuestRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class GuestService {
+
+    @Autowired
+    private GuestRepository guestRepository;
+
+    public List<Guest> getAllGuests() {
+        return guestRepository.findAll();
+    }
+
+    public Guest getGuestById(Long id) {
+        return guestRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Guest not found with id: " + id));
+    }
+
+    public Guest createGuest(GuestDTO guestDTO) {
+        Guest guest = new Guest();
+        guest.setEmail(guestDTO.getEmail());
+        guest.setFullName(guestDTO.getFullName());
+        guest.setPhone(guestDTO.getPhone());
+        return guestRepository.save(guest);
+    }
+
+    public Guest updateGuest(Long id, GuestDTO guestDTO) {
+        Guest guest = getGuestById(id);
+        if (guestDTO.getEmail() != null) guest.setEmail(guestDTO.getEmail());
+        if (guestDTO.getFullName() != null) guest.setFullName(guestDTO.getFullName());
+        if (guestDTO.getPhone() != null) guest.setPhone(guestDTO.getPhone());
+        return guestRepository.save(guest);
+    }
+
+    public void deleteGuest(Long id) {
+        Guest guest = getGuestById(id);
+        guestRepository.delete(guest);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\HotelService.java
+package com.hotel.service;
+
+import com.hotel.dto.HotelDTO;
+import com.hotel.exception.ResourceNotFoundException;
+import com.hotel.model.Hotel;
+import com.hotel.repository.HotelRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class HotelService {
+
+    @Autowired
+    private HotelRepository hotelRepository;
+
+    public List<Hotel> getAllHotels() {
+        return hotelRepository.findAll();
+    }
+
+    public Hotel getHotelById(Long id) {
+        return hotelRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with id: " + id));
+    }
+
+    public Hotel createHotel(HotelDTO hotelDTO) {
+        Hotel hotel = new Hotel();
+        hotel.setName(hotelDTO.getName());
+        hotel.setLocation(hotelDTO.getLocation());
+        hotel.setStars(hotelDTO.getStars());
+        return hotelRepository.save(hotel);
+    }
+
+    public Hotel updateHotel(Long id, HotelDTO hotelDTO) {
+        Hotel hotel = getHotelById(id);
+        if (hotelDTO.getName() != null) hotel.setName(hotelDTO.getName());
+        if (hotelDTO.getLocation() != null) hotel.setLocation(hotelDTO.getLocation());
+        if (hotelDTO.getStars() != null) hotel.setStars(hotelDTO.getStars());
+        return hotelRepository.save(hotel);
+    }
+
+    public void deleteHotel(Long id) {
+        Hotel hotel = getHotelById(id);
+        hotelRepository.delete(hotel);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\PaymentService.java
+package com.hotel.service;
+
+import com.hotel.dto.PaymentDTO;
+import com.hotel.exception.ResourceNotFoundException;
+import com.hotel.model.Booking;
+import com.hotel.model.Payment;
+import com.hotel.repository.BookingRepository;
+import com.hotel.repository.PaymentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class PaymentService {
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    public List<Payment> getAllPayments() {
+        return paymentRepository.findAll();
+    }
+
+    public Payment getPaymentById(Long id) {
+        return paymentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + id));
+    }
+
+    @Transactional
+    public Payment createPayment(PaymentDTO paymentDTO) {
+        Booking booking = bookingRepository.findById(paymentDTO.getBookingId())
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + paymentDTO.getBookingId()));
+
+        Payment payment = new Payment();
+        payment.setAmount(paymentDTO.getAmount());
+        payment.setMethod(paymentDTO.getMethod());
+        payment.setBooking(booking);
+
+        return paymentRepository.save(payment);
+    }
+
+    @Transactional
+    public Payment confirmPayment(Long paymentId, String transactionId) {
+        Payment payment = getPaymentById(paymentId);
+        payment.setStatus("COMPLETED");
+        payment.setTransactionId(transactionId);
+        payment.setPaidAt(LocalDateTime.now());
+
+        Booking booking = payment.getBooking();
+        booking.setStatus("CONFIRMED");
+
+        return paymentRepository.save(payment);
+    }
+
+    public void deletePayment(Long id) {
+        Payment payment = getPaymentById(id);
+        paymentRepository.delete(payment);
+    }
+}
+
+
+// File: C:\Users\Агаси\Downloads\отель\hotel-booking-system\src\main\java\com\hotel\service\RoomService.java
+package com.hotel.service;
+
+import com.hotel.dto.RoomDTO;
+import com.hotel.exception.ResourceNotFoundException;
+import com.hotel.model.Hotel;
+import com.hotel.model.Room;
+import com.hotel.repository.HotelRepository;
+import com.hotel.repository.RoomRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+
+@Service
+public class RoomService {
+
+    @Autowired
+    private RoomRepository roomRepository;
+
+    @Autowired
+    private HotelRepository hotelRepository;
+
+    public List<Room> getAllRooms() {
+        return roomRepository.findAll();
+    }
+
+    public Room getRoomById(Long id) {
+        return roomRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Room not found with id: " + id));
+    }
+
+    public Room createRoom(RoomDTO roomDTO) {
+        Hotel hotel = hotelRepository.findById(roomDTO.getHotelId())
+                .orElseThrow(() -> new ResourceNotFoundException("Hotel not found with id: " + roomDTO.getHotelId()));
+
+        Room room = new Room();
+        room.setNumber(roomDTO.getNumber());
+        room.setType(roomDTO.getType());
+        room.setPricePerNight(roomDTO.getPricePerNight());
+        room.setHotel(hotel);
+        return roomRepository.save(room);
+    }
+
+    public Room updateRoom(Long id, RoomDTO roomDTO) {
+        Room room = getRoomById(id);
+        if (roomDTO.getNumber() != null) room.setNumber(roomDTO.getNumber());
+        if (roomDTO.getType() != null) room.setType(roomDTO.getType());
+        if (roomDTO.getPricePerNight() != null) room.setPricePerNight(roomDTO.getPricePerNight());
+        return roomRepository.save(room);
+    }
+
+    public void deleteRoom(Long id) {
+        Room room = getRoomById(id);
+        roomRepository.delete(room);
+    }
+
+    public List<Room> getRoomsByHotelId(Long hotelId) {
+        return roomRepository.findByHotelId(hotelId);
+    }
+}
+
+

@@ -1,13 +1,16 @@
 package com.hotel.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "guests")
+@Table(name = "guests", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email")
+})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bookings"})
 public class Guest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,7 +28,6 @@ public class Guest {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "guest", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<Booking> bookings = new ArrayList<>();
 
     public Guest() {}
@@ -36,16 +38,19 @@ public class Guest {
         this.phone = phone;
     }
 
+    // Геттеры
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
     public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
     public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public List<Booking> getBookings() { return bookings; }
+
+    // Сеттеры (добавьте эти методы)
+    public void setId(Long id) { this.id = id; }
+    public void setEmail(String email) { this.email = email; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setBookings(List<Booking> bookings) { this.bookings = bookings; }
 }

@@ -4,7 +4,7 @@ import com.hotel.dto.RoomDTO;
 import com.hotel.model.Room;
 import com.hotel.service.RoomService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;  // ← ДОБАВЬТЕ ЭТОТ ИМПОРТ
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +14,7 @@ import java.util.List;
 @RequestMapping("/api/rooms")
 public class RoomController {
 
-    @Autowired  // ← ДОБАВЬТЕ ЭТУ АННОТАЦИЮ
+    @Autowired
     private RoomService roomService;
 
     @GetMapping
